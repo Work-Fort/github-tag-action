@@ -1,4 +1,5 @@
 import * as core from '@actions/core';
+import { getExecOutput } from '@actions/exec';
 import { prerelease, rcompare, valid } from 'semver';
 // @ts-ignore
 import DEFAULT_RELEASE_TYPES from '@semantic-release/commit-analyzer/lib/default-release-types';
@@ -37,16 +38,62 @@ export async function getValidTags(
 
 export async function getCommits(
   baseRef: string,
-  headRef: string
+  headRef: string,
+  paths?: string[]
 ): Promise<{ message: string; hash: string | null }[]> {
   const commits = await compareCommits(baseRef, headRef);
 
-  return commits
-    .filter((commit) => !!commit.commit.message)
-    .map((commit) => ({
-      message: commit.commit.message,
-      hash: commit.sha,
-    }));
+  let filteredCommits = commits.filter((commit) => !!commit.commit.message);
+
+  if (paths && paths.length > 0) {
+    const pathScopedShas = await getPathScopedCommitShas(
+      baseRef,
+      headRef,
+      paths
+    );
+    core.debug(
+      `Path filter matched ${pathScopedShas.size} of ${filteredCommits.length} commits.`
+    );
+    filteredCommits = filteredCommits.filter((commit) =>
+      pathScopedShas.has(commit.sha)
+    );
+  }
+
+  return filteredCommits.map((commit) => ({
+    message: commit.commit.message,
+    hash: commit.sha,
+  }));
+}
+
+/**
+ * Use git log to find commits that touched files matching the given paths.
+ * This is more reliable than filtering via the API since git handles
+ * glob patterns natively.
+ */
+async function getPathScopedCommitShas(
+  baseRef: string,
+  headRef: string,
+  paths: string[]
+): Promise<Set<string>> {
+  const args = [
+    'log',
+    '--format=%H',
+    `${baseRef}..${headRef}`,
+    '--',
+    ...paths,
+  ];
+  core.debug(`Running: git ${args.join(' ')}`);
+
+  const { stdout } = await getExecOutput('git', args);
+
+  const shas = new Set(
+    stdout
+      .trim()
+      .split('\n')
+      .filter((line) => line.length > 0)
+  );
+
+  return shas;
 }
 
 export function getBranchFromRef(ref: string) {

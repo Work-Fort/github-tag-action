@@ -32,6 +32,14 @@ export default async function main() {
   const customReleaseRules = core.getInput('custom_release_rules');
   const shouldFetchAllTags = core.getInput('fetch_all_tags');
   const commitSha = core.getInput('commit_sha');
+  const pathsInput = core.getInput('paths');
+  const paths = pathsInput
+    ? pathsInput.split(',').map((p) => p.trim()).filter(Boolean)
+    : undefined;
+
+  if (paths) {
+    core.info(`Path filter enabled: only commits touching [${paths.join(', ')}] will be considered.`);
+  }
 
   let mappedReleaseRules;
   if (customReleaseRules) {
@@ -85,7 +93,7 @@ export default async function main() {
   let newVersion: string;
 
   if (customTag) {
-    commits = await getCommits(latestTag.commit.sha, commitRef);
+    commits = await getCommits(latestTag.commit.sha, commitRef, paths);
 
     core.setOutput('release_type', 'custom');
     newVersion = customTag;
@@ -121,7 +129,7 @@ export default async function main() {
     core.setOutput('previous_version', previousVersion.version);
     core.setOutput('previous_tag', previousTag.name);
 
-    commits = await getCommits(previousTag.commit.sha, commitRef);
+    commits = await getCommits(previousTag.commit.sha, commitRef, paths);
 
     let bump = await analyzeCommits(
       {
