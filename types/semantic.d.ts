@@ -39,6 +39,7 @@ declare module '@semantic-release/release-notes-generator' {
       presetConfig?: any; // Depends on used preset
     },
     args: {
+      cwd?: string;
       commits: { message: string; hash: string | null }[];
       logger: { log: (args: any) => void };
       options: {

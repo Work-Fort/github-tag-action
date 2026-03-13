@@ -207,6 +207,7 @@ export default async function main() {
       },
     },
     {
+      cwd: process.env.GITHUB_WORKSPACE || process.cwd(),
       commits,
       logger: { log: console.info.bind(console) },
       options: {
