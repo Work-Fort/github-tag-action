@@ -132,6 +132,46 @@ describe('github-tag-action', () => {
       expect(mockSetFailed).not.toBeCalled();
     });
 
+    it('does create initial tag with path filter and no previous tags', async () => {
+      /*
+       * Given
+       */
+      setInput('paths', 'packages/auth/**');
+      setInput('default_bump', 'false');
+      const commits = [
+        { message: 'fix: add license to package', hash: 'abc123' },
+      ];
+      const mockGetCommits = jest
+        .spyOn(utils, 'getCommits')
+        .mockImplementation(async (sha) => commits);
+
+      const validTags: any[] = [];
+      jest
+        .spyOn(utils, 'getValidTags')
+        .mockImplementation(async () => validTags);
+
+      /*
+       * When
+       */
+      await action();
+
+      /*
+       * Then
+       */
+      // The base ref should NOT be 'HEAD' — it should be the repo root commit
+      expect(mockGetCommits).toHaveBeenCalledWith(
+        expect.not.stringMatching(/^HEAD$/),
+        expect.any(String),
+        ['packages/auth/**']
+      );
+      expect(mockCreateTag).toHaveBeenCalledWith(
+        'v0.0.1',
+        expect.any(Boolean),
+        expect.any(String)
+      );
+      expect(mockSetFailed).not.toBeCalled();
+    });
+
     it('does create tag using custom release types', async () => {
       /*
        * Given

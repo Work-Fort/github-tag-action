@@ -104,23 +104,33 @@ export function isPr(ref: string) {
   return ref.includes('refs/pull/');
 }
 
-export function getLatestTag(
+export async function getLatestTag(
   tags: Tags,
   prefixRegex: RegExp,
   tagPrefix: string
 ) {
-  return (
-    tags.find(
-      (tag) =>
-        prefixRegex.test(tag.name) &&
-        !prerelease(tag.name.replace(prefixRegex, ''))
-    ) || {
-      name: `${tagPrefix}0.0.0`,
-      commit: {
-        sha: 'HEAD',
-      },
-    }
+  const found = tags.find(
+    (tag) =>
+      prefixRegex.test(tag.name) &&
+      !prerelease(tag.name.replace(prefixRegex, ''))
   );
+
+  if (found) return found;
+
+  // No previous tag exists — use the repo root so the full history is considered.
+  const { stdout } = await getExecOutput('git', [
+    'rev-list',
+    '--max-parents=0',
+    'HEAD',
+  ]);
+  const rootSha = stdout.trim().split('\n')[0];
+
+  return {
+    name: `${tagPrefix}0.0.0`,
+    commit: {
+      sha: rootSha,
+    },
+  };
 }
 
 export function getLatestPrereleaseTag(

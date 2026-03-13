@@ -81,7 +81,7 @@ export default async function main() {
     prefixRegex,
     /true/i.test(shouldFetchAllTags)
   );
-  const latestTag = getLatestTag(validTags, prefixRegex, tagPrefix);
+  const latestTag = await getLatestTag(validTags, prefixRegex, tagPrefix);
   const latestPrereleaseTag = getLatestPrereleaseTag(
     validTags,
     identifier,
@@ -98,7 +98,7 @@ export default async function main() {
     core.setOutput('release_type', 'custom');
     newVersion = customTag;
   } else {
-    let previousTag: ReturnType<typeof getLatestTag> | null;
+    let previousTag: Await<ReturnType<typeof getLatestTag>> | null;
     let previousVersion: SemVer | null;
     if (!latestPrereleaseTag) {
       previousTag = latestTag;
